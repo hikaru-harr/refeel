@@ -1,0 +1,23 @@
+{
+	"name": "server",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch --env-file=.env src/index.ts",
+		"build": "tsc",
+		"start": "node dist/index.js"
+	},
+	"dependencies": {
+		"@aws-sdk/client-s3": "^3.911.0",
+		"@aws-sdk/s3-request-presigner": "^3.911.0",
+		"@hono/node-server": "^1.19.5",
+		"@hono/zod-validator": "^0.7.4",
+		"dotenv": "^17.2.3",
+		"hono": "^4.10.0",
+		"zod": "^4.1.12"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.17",
+		"tsx": "^4.7.1",
+		"typescript": "^5.8.3"
+	}
+}
