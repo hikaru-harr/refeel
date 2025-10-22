@@ -1,46 +1,16 @@
 // src/pages/Login.tsx
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeClosed } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { FirebaseAuthAdapter } from "@/lib/firebase";
-
-const loginSchema = z.object({
-	email: z.email(),
-	password: z.string(),
-});
-
-type LoginType = z.infer<typeof loginSchema>;
+import useLogin from "./useLogin";
 
 export default function Login() {
-	const navigate = useNavigate();
+	const { loginForm, onSubmit, isError } = useLogin();
+
 	const [showPassword, setShowPassword] = useState(false);
-	const [isError, setIsError] = useState(false);
-
-	const loginForm = useForm<LoginType>({
-		resolver: zodResolver(loginSchema),
-		defaultValues: {
-			email: "",
-			password: "",
-		},
-	});
-
-	const onSubmit = async (data: LoginType) => {
-		console.log(data);
-		const firebaseAuth = new FirebaseAuthAdapter();
-		try {
-			await firebaseAuth.signInWithEmail(data.email, data.password);
-			navigate("/");
-		} catch {
-			setIsError(true);
-		}
-	};
 
 	return (
 		<div className="w-[400px] mx-auto mt-[100px]">
