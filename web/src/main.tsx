@@ -1,14 +1,18 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import PhotoUploader from "./features/photoUploader/PhotoUploader";
+import { RouterProvider } from "react-router";
+import { AuthProvider } from "./provider/AuthProvider";
+import { router } from "./router";
 
 const root = document.getElementById("root");
 
 if (root) {
 	createRoot(root).render(
 		<StrictMode>
-			<PhotoUploader />
+			<AuthProvider>
+				<RouterProvider router={router} />
+			</AuthProvider>
 		</StrictMode>,
 	);
 }
