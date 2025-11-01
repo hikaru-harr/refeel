@@ -1,12 +1,19 @@
 import { LoaderCircle, Upload } from "lucide-react";
 import { useRef } from "react";
+import type { StorageItem } from "@/api/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useFileUpload from "./useFileUpload";
 
-function FileUploadArea() {
+interface Props {
+	setFiles: React.Dispatch<React.SetStateAction<StorageItem[]>>;
+}
+
+function FileUploadArea({ setFiles }: Props) {
 	const inputRef = useRef<HTMLInputElement | null>(null);
-	const { handleSelectFile, isError, isUploading } = useFileUpload();
+	const { handleSelectFile, isError, isUploading } = useFileUpload({
+		setFiles,
+	});
 
 	return (
 		<div>

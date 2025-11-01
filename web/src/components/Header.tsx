@@ -6,7 +6,7 @@ function Header() {
 			<header className="bg-violet-600 py-3">
 				<p className="text-white text-2xl text-center font-bold">ReFeel</p>
 			</header>
-      <Outlet />
+			<Outlet />
 		</>
 	);
 }
