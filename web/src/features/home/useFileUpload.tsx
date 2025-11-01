@@ -1,6 +1,10 @@
 import type React from "react";
 import { useState } from "react";
-import { presignUpload, type StorageItem } from "@/api/storage";
+import {
+	type PresignUploadRes,
+	presignUpload,
+	type StorageItem,
+} from "@/api/storage";
 import { uploadToSignedUrl } from "@/lib/upload";
 
 // 3) ダウンロードURL（確認用）
@@ -9,6 +13,13 @@ import { uploadToSignedUrl } from "@/lib/upload";
 interface Props {
 	setFiles: React.Dispatch<React.SetStateAction<StorageItem[]>>;
 }
+
+const toStorageItem = (file: File, r: PresignUploadRes): StorageItem => ({
+	key: r.key,
+	previewUrl: r.previewUrl ?? null, // サーバで追加済み
+	size: file.size, // S3のListで返るsizeとは一致しない場合あり（実害は少）
+	lastModified: new Date().toISOString(), // 今の時刻で楽観的に埋める
+});
 
 const useFileUpload = ({ setFiles }: Props) => {
 	const [isUploading, setIsUploading] = useState(false);
@@ -30,16 +41,24 @@ const useFileUpload = ({ setFiles }: Props) => {
 	};
 
 	const onUpload = async (file: File) => {
-		console.log(onUpload);
-		console.log(file);
-		const uploadData = await presignUpload(file.type);
-		const response = await uploadToSignedUrl(uploadData.url, file);
-		if (!response.ok) {
+		try {
+			setIsUploading(true);
+			setIsError(false);
+
+			// 1) アップロード先・プレビューURLを取得
+			const presigned = await presignUpload(file.type);
+
+			// 2) PUTでアップロード
+			const res = await uploadToSignedUrl(presigned.url, file);
+			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
+
+			setFiles((current) => [toStorageItem(file, presigned), ...current]);
+		} catch (e) {
+			console.error(e);
 			setIsError(true);
-			return;
+		} finally {
+			setIsUploading(false);
 		}
-		setFiles((current) => [uploadData, ...current]);
-		setIsUploading(false);
 	};
 
 	return {
