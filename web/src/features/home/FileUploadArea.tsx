@@ -1,4 +1,4 @@
-import { Upload } from "lucide-react";
+import { LoaderCircle, Upload } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,16 +6,17 @@ import useFileUpload from "./useFileUpload";
 
 function FileUploadArea() {
 	const inputRef = useRef<HTMLInputElement | null>(null);
-	const { handleSelectFile, isError } = useFileUpload();
+	const { handleSelectFile, isError, isUploading } = useFileUpload();
 
 	return (
 		<div>
 			<div className="flex justify-center mt-6">
 				<Button
+					disabled={isUploading}
 					onClick={() => inputRef.current?.click()}
 					className="h-12 rounded-full w-[250px]"
 				>
-					<Upload />
+					{isUploading ? <LoaderCircle className="animate-spin" /> : <Upload />}
 					写真をアップロード
 				</Button>
 				<Input
@@ -25,7 +26,11 @@ function FileUploadArea() {
 					className="hidden"
 				/>
 			</div>
-			{isError && <p className="text-red-400 text-center mt-2">ファイルを選択してください</p>}
+			{isError && (
+				<p className="text-red-400 text-center mt-2">
+					ファイルを選択してください
+				</p>
+			)}
 		</div>
 	);
 }

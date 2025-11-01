@@ -1,40 +1,45 @@
 import type React from "react";
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { presignUpload } from "@/api/storage";
+import { uploadToSignedUrl } from "@/lib/upload";
+
+// 3) ダウンロードURL（確認用）
+// const d = await presignDownload(key);
 
 const useFileUpload = () => {
-	const [file, setFile] = useState<File | null>(null);
 	const [isUploading, setIsUploading] = useState(false);
-	const [preview, setPreview] = useState<string | null>(null);
 	const [isError, setIsError] = useState(false);
 
-	const handleSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		console.log("handleSelectFile");
+		setIsUploading(true);
+		setIsError(false);
+
 		const selectedFile = e.target.files?.[0];
-		console.log(selectedFile);
 
 		if (!selectedFile) {
 			setIsError(true);
 			return;
 		}
 
-		onUpload(selectedFile);
+		await onUpload(selectedFile);
 	};
 
-	const onUpload = (file: File) => {
+	const onUpload = async (file: File) => {
+		console.log(onUpload);
 		console.log(file);
+		const { url, key } = await presignUpload(file.type);
+		const response = await uploadToSignedUrl(url, file);
+		if (!response.ok) {
+			setIsError(true);
+			return;
+		}
+		setIsUploading(false);
 	};
 
-	// const handleUpload = async () => {
-	// 	if (!file) return;
-	// 	try {
-	// 		setIsUploading(true);
-	// 		await onUpload(file);
-	// 		reset();
-	// 	} finally {
-	// 		setIsUploading(false);
-	// 	}
-	// };
 	return {
 		isError,
+		isUploading,
 		handleSelectFile,
 	};
 };
