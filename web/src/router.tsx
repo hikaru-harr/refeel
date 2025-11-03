@@ -1,11 +1,18 @@
 import { createBrowserRouter } from "react-router";
+import Header from "./components/Header";
+import Home from "./features/home/Home";
 import Login from "./features/login/Login";
-import PhotoUploader from "./features/photoUploader/PhotoUploader";
 
 export const router = createBrowserRouter([
 	{
 		path: "/",
-		element: <PhotoUploader />,
+		element: <Header />,
+		children: [
+			{
+				index: true,
+				element: <Home />,
+			},
+		],
 	},
 	{
 		path: "/login",
