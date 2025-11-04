@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider          = "postgresql"
-  url               = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum PhotoStatus {
@@ -15,18 +15,83 @@ enum PhotoStatus {
 }
 
 model Photo {
-  id        String      @id @default(uuid())
-  userId    String
-  objectKey String      @unique
-  mime      String
-  bytes     Int
-  width     Int?
-  height    Int?
-  exifJson  Json?
-  sha256    String?
-  status    PhotoStatus @default(UPLOADED)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id            String          @id @default(uuid())
+  userId        String
+  objectKey     String          @unique
+  mime          String
+  bytes         Int
+  width         Int?
+  height        Int?
+  exifJson      Json?
+  sha256        String?
+  status        PhotoStatus     @default(UPLOADED)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  PhotoTag      PhotoTag[]
+  PhotoComment  PhotoComment[]
+  PhotoFavorite PhotoFavorite[]
+  PhotoMeta     PhotoMeta[]
 
   @@index([userId, createdAt(sort: Desc)])
+}
+
+model Tag {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  PhotoTag  PhotoTag[]
+
+  @@index([name])
+}
+
+model PhotoTag {
+  photoId   String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  photo Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([photoId, tagId])
+  @@index([tagId])
+}
+
+model PhotoComment {
+  id        String   @id @default(uuid())
+  photoId   String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  photo Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@index([photoId, createdAt(sort: Desc)])
+}
+
+model PhotoFavorite {
+  photoId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  photo Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@id([photoId, userId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model PhotoMeta {
+  photoId     String    @id
+  takenAt     DateTime?
+  camera      String?
+  lens        String?
+  iso         Int?
+  fNumber     Float?
+  exposure    String? // 例 "1/125"
+  focalLength Float?
+  gpsLat      Float?
+  gpsLng      Float?
+  orientation Int?
+
+  photo Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
 }
