@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import {
 	GetObjectCommand,
+	HeadObjectCommand,
 	ListObjectsV2Command,
 	PutObjectCommand,
 } from "@aws-sdk/client-s3";
@@ -14,6 +15,15 @@ const UploadBody = z.object({
 	contentType: z.string().min(1),
 	key: z.string().min(1).optional(),
 });
+
+const CompleteBody = z.object({
+	key: z.string().min(1),
+	mime: z.string().min(1),
+	bytes: z.coerce.number().int().min(1),
+	sha256: z.string().min(1).optional(), // 任意（重複検知などに利用）
+	exifHint: z.record(z.string(), z.string()).optional(), // 任意（撮影日時などヒント）
+});
+
 const DownloadQuery = z.object({ key: z.string().min(1) });
 
 const ListQuery = z.object({
@@ -60,6 +70,24 @@ async function mapWithLimit<T, R>(
 		});
 	await Promise.all(workers);
 	return ret;
+}
+
+// 追加: S3上の存在確認（HEAD）ヘルパ
+async function ensureObjectExists(key: string) {
+	await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
+}
+
+// 追加: AIワーカーへの投入ダミー（実装はお好みのキューで差し替えてOK）
+async function enqueueAIJob(input: {
+	photoId: string;
+	key: string;
+	mime: string;
+	bytes: number;
+	sha256?: string;
+}) {
+	// TODO: BullMQ / RabbitMQ / Cloud Tasks / 自前ワーカーへ投げる
+	// いまはログだけ（MVP）
+	console.log("[AI-QUEUE] enqueue", input);
 }
 
 export const storage = new Hono()
@@ -172,4 +200,39 @@ export const storage = new Hono()
 			{ expiresIn: 300 },
 		);
 		return c.json({ key, url, expiresIn: 300 });
+	})
+
+	.post("/complete", zValidator("json", CompleteBody), async (c) => {
+		const { key, mime, bytes, sha256, exifHint } = c.req.valid("json");
+
+		// 1) S3上に実体があるか軽く確認（HEAD）
+		try {
+			await ensureObjectExists(key);
+		} catch (e) {
+			// 事前署名URLにPUTが成功していない/キーが間違っている等
+			return c.json(
+				{ error: "ObjectNotFound", message: `No such object: ${key}` },
+				400,
+			);
+		}
+
+		// 2) DBにレコード作成（MVP：ここではIDだけ払い出して、DB部分は差し替え前提）
+		//    実際は userId をJWTから取得して保存してください
+		const photoId = crypto.randomUUID();
+
+		// TODO: ここでDBに INSERT (photos)
+		//  - id: photoId
+		//  - user_id: <JWTから>
+		//  - object_key: key
+		//  - mime, bytes, sha256
+		//  - exif_json: exifHint ?? null
+		//  - status: "processing"
+		//  - created_at/updated_at
+		// 例）Prismaなら prisma.photo.create({ data: {...} })
+
+		// 3) AIワーカーへ投入（ダミー関数を呼ぶ。実装はキューに差し替え）
+		await enqueueAIJob({ photoId, key, mime, bytes, sha256 });
+
+		// 4) レスポンス（フロントはこれで“解析中”表示へ）
+		return c.json({ photoId, status: "processing" });
 	});

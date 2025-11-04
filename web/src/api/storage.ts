@@ -21,6 +21,14 @@ export type StorageListResponse = {
 	limit: number;
 };
 
+type CompleteBody = {
+	key: string;
+	mime: string;
+	bytes: number;
+	sha256: string;
+	exifHint: Record<string, unknown>;
+};
+
 export async function getUploadFile() {
 	const res = await fetch(`${API_BASE}/storage?prefix=photos/&presign=1`, {
 		method: "GET",
@@ -45,6 +53,28 @@ export async function presignDownload(key: string) {
 	const res = await fetch(
 		`${API_BASE}/storage/presign/download?key=${encodeURIComponent(key)}`,
 	);
+	if (!res.ok) throw new Error(`presign download failed: ${res.status}`);
+	return (await res.json()) as { key: string; url: string; expiresIn: number };
+}
+
+export async function uploadCompleat({
+	key,
+	mime,
+	bytes,
+	sha256,
+	exifHint,
+}: CompleteBody) {
+	const res = await fetch(`${API_BASE}/storage/complete`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			key,
+			mime,
+			bytes,
+			sha256,
+			exifHint,
+		}),
+	});
 	if (!res.ok) throw new Error(`presign download failed: ${res.status}`);
 	return (await res.json()) as { key: string; url: string; expiresIn: number };
 }

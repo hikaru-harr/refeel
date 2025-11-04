@@ -4,6 +4,7 @@ import {
 	type PresignUploadRes,
 	presignUpload,
 	type StorageItem,
+	uploadCompleat,
 } from "@/api/storage";
 import { uploadToSignedUrl } from "@/lib/upload";
 
@@ -45,18 +46,24 @@ const useFileUpload = ({ setFiles }: Props) => {
 			setIsUploading(true);
 			setIsError(false);
 
-			// 1) アップロード先・プレビューURLを取得
 			const presigned = await presignUpload(file.type);
 
-			// 2) PUTでアップロード
 			const res = await uploadToSignedUrl(presigned.url, file);
+
 			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
 
 			setFiles((current) => [toStorageItem(file, presigned), ...current]);
+			setIsUploading(false);
+			await uploadCompleat({
+				key: presigned.key,
+				mime: "image/jpeg",
+				bytes: 10,
+				sha256: "動作確認",
+				exifHint: { taken_at: "2025-11-03T09:12:00Z" },
+			});
 		} catch (e) {
 			console.error(e);
 			setIsError(true);
-		} finally {
 			setIsUploading(false);
 		}
 	};
