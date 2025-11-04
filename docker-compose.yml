@@ -1,7 +1,9 @@
 services:
+
   db:
     image: postgres:16
     container_name: refeel-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -9,12 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      - db-data:/var/lib/postgresql/data
 
   minio:
     image: minio/minio:latest
@@ -34,7 +31,6 @@ services:
       timeout: 5s
       retries: 20
 
-  # 初回セットアップ：バケット作成 + CORS設定
   minio-setup:
     image: minio/mc:latest
     container_name: app-minio-setup
@@ -44,12 +40,12 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     environment:
       MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
-      BUCKET: ${MINIO_BUCKET}
+      MINIO_BUCKET: ${MINIO_BUCKET}
       WEB_ORIGIN: ${WEB_ORIGIN}
     command: >-
       "mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
-       mc mb --ignore-existing local/$BUCKET &&
-       mc anonymous set none local/$BUCKET &&
+       mc mb --ignore-existing local/$MINIO_BUCKET &&
+       mc anonymous set none local/$MINIO_BUCKET &&
        echo '{
          \"CORSRules\": [
            {
@@ -66,5 +62,6 @@ services:
     restart: "no"
 
 volumes:
+  db-data: {}
   pg:
   minio:

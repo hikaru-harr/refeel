@@ -10,6 +10,7 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 import { BUCKET_NAME, s3 } from "../lib/bucket.js";
+import { prisma } from "../lib/prisma.js";
 
 const UploadBody = z.object({
 	contentType: z.string().min(1),
@@ -205,34 +206,41 @@ export const storage = new Hono()
 	.post("/complete", zValidator("json", CompleteBody), async (c) => {
 		const { key, mime, bytes, sha256, exifHint } = c.req.valid("json");
 
-		// 1) S3上に実体があるか軽く確認（HEAD）
+		// 1) S3 に実体があるか確認
 		try {
 			await ensureObjectExists(key);
-		} catch (e) {
-			// 事前署名URLにPUTが成功していない/キーが間違っている等
+		} catch {
 			return c.json(
 				{ error: "ObjectNotFound", message: `No such object: ${key}` },
 				400,
 			);
 		}
 
-		// 2) DBにレコード作成（MVP：ここではIDだけ払い出して、DB部分は差し替え前提）
-		//    実際は userId をJWTから取得して保存してください
-		const photoId = crypto.randomUUID();
+		// 実運用では JWT から userId を取得。MVP はダミーでOK
+		const userId = "dummy-user";
 
-		// TODO: ここでDBに INSERT (photos)
-		//  - id: photoId
-		//  - user_id: <JWTから>
-		//  - object_key: key
-		//  - mime, bytes, sha256
-		//  - exif_json: exifHint ?? null
-		//  - status: "processing"
-		//  - created_at/updated_at
-		// 例）Prismaなら prisma.photo.create({ data: {...} })
+		// 2) DB に INSERT（UPLOADED 状態で作成）
+		const rec = await prisma.photo.create({
+			data: {
+				id: crypto.randomUUID(),
+				userId,
+				objectKey: key,
+				mime,
+				bytes,
+				sha256: sha256 ?? null,
+				exifJson: exifHint ?? null,
+				status: "UPLOADED",
+			},
+			select: { id: true, objectKey: true, status: true, createdAt: true },
+		});
 
-		// 3) AIワーカーへ投入（ダミー関数を呼ぶ。実装はキューに差し替え）
-		await enqueueAIJob({ photoId, key, mime, bytes, sha256 });
+		// 3) 解析キューへ（今はダミー）
+		await enqueueAIJob({ photoId: rec.id, key, mime, bytes, sha256 });
 
-		// 4) レスポンス（フロントはこれで“解析中”表示へ）
-		return c.json({ photoId, status: "processing" });
+		// 4) レスポンス
+		return c.json({
+			photoId: rec.id,
+			status: rec.status,
+			createdAt: rec.createdAt,
+		});
 	});
