@@ -4,6 +4,7 @@ import {
 	onAuthStateChanged as fbOnAuthStateChanged,
 	signOut as fbSignOut,
 	getAuth,
+	onAuthStateChanged,
 	signInWithEmailAndPassword,
 	type User,
 } from "firebase/auth";
@@ -18,8 +19,20 @@ const firebaseConfig = {
 	appId: import.meta.env.VITE_APP_ID,
 };
 
-export const app = initializeApp(firebaseConfig);
+export const app = getApps().length
+	? getApps()[0]
+	: initializeApp(firebaseConfig);
+export const auth = getAuth(app);
 
+// 初期化完了を待つ（currentUser が決まるまで待機）
+export function waitAuthReady(): Promise<User | null> {
+	return new Promise((resolve) => {
+		const off = onAuthStateChanged(auth, (u) => {
+			off();
+			resolve(u);
+		});
+	});
+}
 function toAuthUser(u: User): AuthUser {
 	return {
 		id: u.uid,
@@ -30,46 +43,34 @@ function toAuthUser(u: User): AuthUser {
 }
 
 export class FirebaseAuthAdapter implements AuthPort {
-	private auth = getAuth();
+  // auth は外の単一インスタンスを使う
+  async signUpWithEmail(email: string, password: string): Promise<AuthUser> {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    return toAuthUser(cred.user);
+  }
 
-	constructor() {
-		if (!getApps().length) {
-			initializeApp(firebaseConfig);
-		}
-	}
+  async signInWithEmail(email: string, password: string): Promise<AuthUser> {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    return toAuthUser(cred.user);
+  }
 
-	async signUpWithEmail(email: string, password: string): Promise<AuthUser> {
-		const cred = await createUserWithEmailAndPassword(
-			this.auth,
-			email,
-			password,
-		);
-		return toAuthUser(cred.user);
-	}
+  async signOut(): Promise<void> {
+    await fbSignOut(auth);
+  }
 
-	async signInWithEmail(email: string, password: string): Promise<AuthUser> {
-		const cred = await signInWithEmailAndPassword(this.auth, email, password);
-		return toAuthUser(cred.user);
-	}
+  async getCurrentUser(): Promise<AuthUser | null> {
+    const u = auth.currentUser ?? (await waitAuthReady());
+    return u ? toAuthUser(u) : null;
+  }
 
-	async signOut(): Promise<void> {
-		await fbSignOut(this.auth);
-	}
+  // ★ 初期化完了を待ってから token を取得
+  async getIdToken(forceRefresh = false): Promise<string | null> {
+    const u = auth.currentUser ?? (await waitAuthReady());
+    if (!u) return null;
+    return u.getIdToken(forceRefresh);
+  }
 
-	async getCurrentUser(): Promise<AuthUser | null> {
-		const u = this.auth.currentUser;
-		return u ? toAuthUser(u) : null;
-	}
-
-	async getIdToken(forceRefresh = false): Promise<string | null> {
-		const u = this.auth.currentUser;
-		if (!u) return null;
-		return u.getIdToken(forceRefresh);
-	}
-
-	onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
-		return fbOnAuthStateChanged(this.auth, (u) =>
-			callback(u ? toAuthUser(u) : null),
-		);
-	}
+  onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
+    return fbOnAuthStateChanged(auth, (u) => callback(u ? toAuthUser(u) : null));
+  }
 }
