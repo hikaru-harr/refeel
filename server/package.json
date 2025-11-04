@@ -1,10 +1,17 @@
 {
 	"name": "server",
 	"type": "module",
+	"prisma": {
+		"schema": "./prisma/schema.prisma"
+	},
 	"scripts": {
 		"dev": "tsx watch --env-file=.env src/index.ts",
 		"build": "tsc",
-		"start": "node dist/index.js"
+		"start": "node dist/index.js",
+		"prisma:migrate": "prisma migrate dev",
+		"prisma:studio": "prisma studio",
+		"seed": "tsx scripts/seed.ts",
+		"prisma:generate": "prisma generate"
 	},
 	"dependencies": {
 		"@auth/core": "^0.41.0",
@@ -12,15 +19,17 @@
 		"@aws-sdk/s3-request-presigner": "^3.911.0",
 		"@hono/node-server": "^1.19.5",
 		"@hono/zod-validator": "^0.7.4",
-		"@prisma/client": "^6.17.1",
+		"@prisma/client": "^6.18.0",
 		"argon2": "^0.44.0",
 		"dotenv": "^17.2.3",
+		"firebase-admin": "^13.5.0",
 		"hono": "^4.10.0",
+		"jose": "^6.1.0",
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@types/node": "^20.11.17",
-		"prisma": "^6.17.1",
+		"prisma": "^6.18.0",
 		"tsx": "^4.7.1",
 		"typescript": "^5.8.3"
 	}

@@ -2,6 +2,7 @@ import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { useAuth } from "./middlewares/auth.js";
 import { storage } from "./routers/storage.js";
 
 const app = new Hono();
@@ -11,7 +12,7 @@ app.use(
 	"*",
 	cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:5173" }),
 );
-
+app.use("*", useAuth);
 app.get("/", (c) => c.text("Hello Hono!"));
 app.get("/health", (c) => c.json({ ok: true }));
 app.route("/storage", storage);

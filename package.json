@@ -6,7 +6,8 @@
 	"scripts": {
 		"biome:format": "pnpm exec biome format --write",
 		"biome:lint": "pnpm exec biome lint --write",
-		"biome:check": "pnpm exec biome check --write"
+		"biome:check": "pnpm exec biome check --write",
+		"postinstall": "pnpm --filter ./server run prisma:generate || echo \"skip prisma generate\""
 	},
 	"keywords": [],
 	"author": "",
