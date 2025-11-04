@@ -21,7 +21,7 @@ function FileUploadArea({ setFiles }: Props) {
 				<Button
 					disabled={isUploading}
 					onClick={() => inputRef.current?.click()}
-					className="h-12 rounded-full w-[250px]"
+					className="h-12 rounded-full w-[250px] cursor-pointer"
 				>
 					{isUploading ? <LoaderCircle className="animate-spin" /> : <Upload />}
 					写真をアップロード
