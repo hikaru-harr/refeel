@@ -9,10 +9,10 @@ import {
 import { uploadToSignedUrl } from "@/lib/upload";
 
 interface Props {
-	setFiles: React.Dispatch<React.SetStateAction<StorageItem[]>>;
+	setFiles: React.Dispatch<React.SetStateAction<PhotoItem[]>>;
 }
 
-const toStorageItem = (file: File, r: PresignUploadRes): StorageItem => ({
+const toStorageItem = (file: File, r: PresignUploadRes): PhotoItem => ({
 	key: r.key,
 	previewUrl: r.previewUrl ?? null,
 	size: file.size,

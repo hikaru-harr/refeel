@@ -1,5 +1,7 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, MessageCircleMore, Send, Star, Tag } from "lucide-react";
-import type { StorageItem } from "@/api/storage";
+import { useState } from "react";
+import { favOff, favOn, type PhotoItem } from "@/api/photos";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -13,80 +15,137 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-const buttonItems = [
-	{
-		icon: Tag,
-		position: 80,
-	},
-	{
-		icon: Star,
-		position: 140,
-	},
-	{
-		icon: MessageCircleMore,
-		position: 200,
-	},
-];
-
 interface Props {
-	files: StorageItem[];
+	files: PhotoItem[];
 }
 
 function FileView({ files }: Props) {
+	const qc = useQueryClient();
+	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [commentText, setCommentText] = useState("");
+
+	// --- お気に入りトグル ---
+	const toggleFav = useMutation({
+		mutationFn: async (file: PhotoItem) => {
+			console.log(file)
+			if (file.isFavorited) return favOff(file.id);
+			return favOn(file.id);
+		},
+		onMutate: async (file) => {
+			qc.setQueryData(["photos"], (old: any) => {
+				if (!old) return old;
+				const copy = structuredClone(old);
+				for (const group of Object.values(copy.grouped)) {
+					for (const item of group) {
+						if (item.id === file.id) {
+							item.isFavorited = !item.isFavorited;
+							item.favoriteCount += item.isFavorited ? 1 : -1;
+						}
+					}
+				}
+				return copy;
+			});
+		},
+		onSettled: () => {
+			qc.invalidateQueries({ queryKey: ["photos"] });
+		},
+	});
+
+	const handleRecommend = (file: PhotoItem) => {
+		console.log("Recommend start:", file.objectKey);
+		// ここでAIタグ生成APIを呼び出す想定
+	};
+
 	return (
 		<div className="grid grid-flow-row lg:grid-cols-5 md:grid-cols-4 grid-cols-3 gap-1 mt-4">
-			{files.map((file, i) => (
-				<Dialog key={file.key}>
+			{files.map((file) => (
+				<Dialog
+					key={file.id}
+					onOpenChange={(open) => open && setSelectedId(file.id)}
+				>
 					<DialogTrigger asChild>
 						<button type="button" className="cursor-pointer">
 							<div className="relative aspect-square overflow-hidden bg-neutral-200">
 								<img
 									src={file.previewUrl ?? ""}
-									alt={`file-${i + 1}`}
-									className="absolute inset-0 h-full w-full object-cover object-center"
+									alt={file.objectKey}
+									className="absolute inset-0 h-full w-full object-cover"
 									loading="lazy"
 								/>
 							</div>
 						</button>
 					</DialogTrigger>
+
 					<DialogContent className="h-screen w-screen">
 						<DialogHeader className="p-4">
-							<DialogClose
-								data-slot="dialog-close"
-								className="absolute top-6 left-6 cursor-pointer ring-offset-background focus:ring-ring-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-6"
-							>
+							<DialogClose className="absolute top-6 left-6 cursor-pointer">
 								<ArrowLeft />
 							</DialogClose>
-							<DialogTitle>Edit profile</DialogTitle>
-							<DialogDescription>date</DialogDescription>
+							<DialogTitle>
+								{new Date(file.createdAt).toLocaleDateString()}
+							</DialogTitle>
+							<DialogDescription>{file.mime}</DialogDescription>
 						</DialogHeader>
-						<div className="relative flex-1 overflow-hidden grid place-items-center px-4">
+
+						{/* 画像プレビュー */}
+						<div className="relative flex-1 grid place-items-center px-4 overflow-hidden">
 							<img
 								src={file.previewUrl ?? ""}
 								alt="preview"
 								className="max-w-[calc(100vw-2rem)] max-h-[calc(100svh-8rem)] object-contain"
 							/>
 						</div>
-						<DialogFooter className="p-4 flex items-end">
+
+						{/* コメント入力＋ボタン群 */}
+						<DialogFooter className="p-4">
 							<div className="relative w-full">
 								<div className="flex">
-									<Input type="text" placeholder="コメントを追加" />
-									<Button size="icon">
+									<Input
+										type="text"
+										value={commentText}
+										onChange={(e) => setCommentText(e.target.value)}
+										placeholder="コメントを追加"
+									/>
+									<Button
+										size="icon"
+										onClick={() => console.log("Send comment:", commentText)}
+									>
 										<Send />
 									</Button>
 								</div>
-								{buttonItems.map((item) => {
-									const Icon = item.icon;
-									return (
-										<button
-											key={item.toString()}
-											type="button"
-											className={`absolute cursor-pointer bg-violet-600 text-white top-[-${item.position}px] right-4 bg-red-200 rounded-full w-12 h-12 flex justify-center items-center`}
-										>
-											<Icon />
-										</button>
-									);
-								})}
+
+								{/* タグ生成 */}
+								<button
+									type="button"
+									className="absolute right-4 top-[-80px] bg-violet-500 text-white rounded-full w-12 h-12 flex justify-center items-center"
+									onClick={() => handleRecommend(file)}
+								>
+									<Tag />
+								</button>
+
+								{/* お気に入り */}
+								<button
+									type="button"
+									onClick={() => toggleFav.mutate(file)}
+									className={`absolute right-4 top-[-140px] rounded-full w-12 h-12 flex justify-center items-center ${
+										file.isFavorited
+											? "bg-yellow-400 text-black"
+											: "bg-neutral-300 text-gray-700"
+									}`}
+								>
+									<Star />
+								</button>
+
+								{/* コメントアイコン */}
+								<button
+									type="button"
+									className="absolute right-4 top-[-200px] bg-blue-500 text-white rounded-full w-12 h-12 flex justify-center items-center"
+									onClick={() =>
+										console.log("Open comment thread for", file.id)
+									}
+								>
+									<MessageCircleMore />
+								</button>
 							</div>
 						</DialogFooter>
 					</DialogContent>

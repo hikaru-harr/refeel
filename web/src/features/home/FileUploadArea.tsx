@@ -1,12 +1,13 @@
 import { LoaderCircle, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import type { PhotoItem } from "@/api/photos";
 import type { StorageItem } from "@/api/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useFileUpload from "./useFileUpload";
 
 interface Props {
-	setFiles: React.Dispatch<React.SetStateAction<StorageItem[]>>;
+	setFiles: React.Dispatch<React.SetStateAction<PhotoItem[]>>;
 }
 
 function FileUploadArea({ setFiles }: Props) {
