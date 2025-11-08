@@ -1,16 +1,24 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string;
 
-// src/api/photos.ts
 export type PhotoItem = {
 	id: string;
 	objectKey: string;
-	mime: string;
-	bytes: number;
-	createdAt: string;
+	mime: string | null;
+	bytes: number | null;
+	createdAt: string; // ISO
+	width: number | null;
+	height: number | null;
+	exifJson: Record<string, unknown> | null;
+	status: string;
 	previewUrl: string | null;
 	favoriteCount: number;
 	commentCount: number;
 	isFavorited: boolean;
+};
+
+export type ListPhotosResponse = {
+	grouped: Record<string, PhotoItem[]>; // group=all のときは { all: PhotoItem[] }
+	nextCursor: string | null;
 };
 
 export async function fetchPhotos({
@@ -30,11 +38,11 @@ export async function fetchPhotos({
 	const res = await fetch(`${API_BASE}/photos?${q.toString()}`, {
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${localStorage.getItem('firebase_token')}`,
+			Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`, // ← Firebase Authから取得
 		},
 	});
 	return (await res.json()) as {
-		grouped: PhotoItem[]
+		grouped: Record<string, PhotoItem[]>;
 		nextCursor: string | null;
 	};
 }
