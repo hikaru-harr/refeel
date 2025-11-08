@@ -36,9 +36,7 @@ function Home() {
 	return (
 		<div>
 			{/* アップロード完了時は invalidate して再取得 */}
-			<FileUploadArea
-				setFiles={() => query.refetch()}
-			/>
+			<FileUploadArea />
 			<FileView
 				files={files}
 				onImgExpireRefetch={() => query.refetch()}
