@@ -50,8 +50,10 @@ export class FirebaseAuthAdapter implements AuthPort {
 	}
 
 	async signInWithEmail(email: string, password: string): Promise<AuthUser> {
-		const cred = await signInWithEmailAndPassword(auth, email, password);
-		return toAuthUser(cred.user);
+		const {user} = await signInWithEmailAndPassword(auth, email, password);
+		const token = await user.getIdToken()
+		localStorage.setItem("firebase_token", token)
+		return toAuthUser(user);
 	}
 
 	async signOut(): Promise<void> {

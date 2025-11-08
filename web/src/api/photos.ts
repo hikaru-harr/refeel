@@ -27,38 +27,40 @@ export async function fetchPhotos({
 	if (cursor) q.set("cursor", cursor);
 	q.set("group", group);
 	q.set("presign", "1");
-	const res = await fetch(`/api/photos?${q.toString()}`, {
-		credentials: "include",
+	const res = await fetch(`${API_BASE}/photos?${q.toString()}`, {
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${localStorage.getItem('firebase_token')}`,
+		},
 	});
 	return (await res.json()) as {
-		grouped: Record<string, PhotoItem[]>;
+		grouped: PhotoItem[]
 		nextCursor: string | null;
 	};
 }
 
 export async function favOn(photoId: string) {
-  const res = await fetch(`${API_BASE}/${photoId}/favorite`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`, // ← Firebase Authから取得
-    },
-  });
+	const res = await fetch(`${API_BASE}/photos/${photoId}/favorite`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`, // ← Firebase Authから取得
+		},
+	});
 
-  if (!res.ok) throw new Error('Failed to add favorite');
-  return res.json();
+	if (!res.ok) throw new Error('Failed to add favorite');
+	return res.json();
 }
 
 export async function favOff(photoId: string) {
-  const res = await fetch(`${BASE}/${photoId}/favorite`, {
-    method: 'DELETE',
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`,
-    },
-  });
+	const res = await fetch(`${API_BASE}/photos/${photoId}/favorite`, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`,
+		},
+	});
 
-  if (!res.ok) throw new Error('Failed to remove favorite');
-  return res.json();
+	if (!res.ok) throw new Error('Failed to remove favorite');
+	return res.json();
 }
