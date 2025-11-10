@@ -8,7 +8,10 @@ import { FirebaseAuthAdapter } from "@/lib/firebase";
 const useLogin = () => {
 	const navigate = useNavigate();
 
-	const [requestState, setRequestState] = useState({ isLoading: false, isError: false })
+	const [requestState, setRequestState] = useState({
+		isLoading: false,
+		isError: false,
+	});
 
 	const loginForm = useForm<LoginType>({
 		resolver: zodResolver(loginSchema),
@@ -19,13 +22,13 @@ const useLogin = () => {
 	});
 
 	const onSubmit = async (data: LoginType) => {
-		setRequestState((current) => ({ ...current, isLoading: true }))
+		setRequestState((current) => ({ ...current, isLoading: true }));
 		const firebaseAuth = new FirebaseAuthAdapter();
 		try {
 			await firebaseAuth.signInWithEmail(data.email, data.password);
 			navigate("/");
 		} catch {
-			setRequestState(() => ({ isError: true, isLoading: false }))
+			setRequestState(() => ({ isError: true, isLoading: false }));
 		}
 	};
 	return {

@@ -3,8 +3,8 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { useAuth } from "./middlewares/auth.js";
-import { storage } from "./routers/storage.js";
 import { photos } from "./routers/photos.js";
+import { storage } from "./routers/storage.js";
 
 const app = new Hono();
 

@@ -1,11 +1,19 @@
+import type {
+	ListPhotosResponse,
+	PhotoItemType,
+} from "@refeel/shared/photo.js";
+import type {
+	InfiniteData,
+	UseInfiniteQueryResult,
+} from "@tanstack/react-query";
 import { useMemo } from "react";
-
-import type { ListPhotosResponse, PhotoItemType } from "@refeel/shared/photo.js";
 import PhotoDetail from "./PhotoDetail";
-import type { InfiniteData, UseInfiniteQueryResult } from "@tanstack/react-query";
 
 type Props = {
-	fetchPhotoQuery: UseInfiniteQueryResult<InfiniteData<ListPhotosResponse, unknown>, Error>
+	fetchPhotoQuery: UseInfiniteQueryResult<
+		InfiniteData<ListPhotosResponse, unknown>,
+		Error
+	>;
 };
 
 export default function FileView({ fetchPhotoQuery }: Props) {
@@ -17,7 +25,11 @@ export default function FileView({ fetchPhotoQuery }: Props) {
 	return (
 		<div className="grid grid-flow-row lg:grid-cols-5 md:grid-cols-4 grid-cols-3 gap-1 mt-4">
 			{files.map((file) => (
-				<PhotoDetail key={file.id} file={file} fetchPhotoQuery={fetchPhotoQuery} />
+				<PhotoDetail
+					key={file.id}
+					file={file}
+					fetchPhotoQuery={fetchPhotoQuery}
+				/>
 			))}
 		</div>
 	);

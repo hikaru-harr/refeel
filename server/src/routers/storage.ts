@@ -203,78 +203,79 @@ export const storage = new Hono()
 		return c.json({ key, url, expiresIn: 300 });
 	})
 
-	.post(
-		"/complete",
-		zValidator("json", CompleteBody),
-		async (c) => {
-			const userId = c.var.userId as string;
-			const { key, mime, bytes, sha256, exifHint } = c.req.valid("json");
+	.post("/complete", zValidator("json", CompleteBody), async (c) => {
+		const userId = c.var.userId as string;
+		const { key, mime, bytes, sha256, exifHint } = c.req.valid("json");
 
-			// 1) S3 に実体確認
-			try {
-				await ensureObjectExists(key);
-			} catch {
-				return c.json({ error: "ObjectNotFound", message: `No such object: ${key}` }, 400);
-			}
-
-			// 2) DB 作成（同一キーの重複を避けたいなら upsert にしてもOK）
-			const createdAt =
-				typeof exifHint?.taken_at === "string" ? new Date(exifHint.taken_at) : new Date();
-
-			const rec = await prisma.photo.create({
-				data: {
-					id: crypto.randomUUID(),
-					userId,
-					objectKey: key,
-					mime,
-					bytes,
-					sha256: sha256 ?? null,
-					exifJson: exifHint ?? null,
-					status: "UPLOADED",
-					createdAt, // 並び順に効くのでここで確定
-				},
-			});
-
-			// 3) 必要なら解析キューへ
-			await enqueueAIJob({ photoId: rec.id, key, mime, bytes, sha256 });
-
-			// 4) 返却用に完全アイテムを整形
-			//    counts と本人の isFavorited を同時に取得
-			const full = await prisma.photo.findUniqueOrThrow({
-				where: { id: rec.id },
-				include: {
-					_count: { select: { PhotoComment: true, PhotoFavorite: true } },
-					PhotoFavorite: { where: { userId }, select: { userId: true } },
-				},
-			});
-
-			// 署名付きプレビュー（任意: クエリで presign/ttl を切替可能にしても◎）
-			let previewUrl: string | null = null;
-			if (isImageKey(full.objectKey)) {
-				previewUrl = await getSignedUrl(
-					s3,
-					new GetObjectCommand({ Bucket: BUCKET_NAME, Key: full.objectKey }),
-					{ expiresIn: 300 }
-				);
-			}
-
-			// 5) 完全な PhotoItem を返す
-			return c.json({
-				item: {
-					id: full.id,
-					objectKey: full.objectKey,
-					mime: full.mime,
-					bytes: full.bytes,
-					createdAt: full.createdAt,
-					width: full.width,
-					height: full.height,
-					exifJson: full.exifJson,
-					status: full.status,
-					previewUrl,
-					favoriteCount: full._count.PhotoFavorite,
-					commentCount: full._count.PhotoComment,
-					isFavorited: full.PhotoFavorite.length > 0,
-				},
-			});
+		// 1) S3 に実体確認
+		try {
+			await ensureObjectExists(key);
+		} catch {
+			return c.json(
+				{ error: "ObjectNotFound", message: `No such object: ${key}` },
+				400,
+			);
 		}
-	);
+
+		// 2) DB 作成（同一キーの重複を避けたいなら upsert にしてもOK）
+		const createdAt =
+			typeof exifHint?.taken_at === "string"
+				? new Date(exifHint.taken_at)
+				: new Date();
+
+		const rec = await prisma.photo.create({
+			data: {
+				id: crypto.randomUUID(),
+				userId,
+				objectKey: key,
+				mime,
+				bytes,
+				sha256: sha256 ?? null,
+				exifJson: exifHint ?? null,
+				status: "UPLOADED",
+				createdAt, // 並び順に効くのでここで確定
+			},
+		});
+
+		// 3) 必要なら解析キューへ
+		await enqueueAIJob({ photoId: rec.id, key, mime, bytes, sha256 });
+
+		// 4) 返却用に完全アイテムを整形
+		//    counts と本人の isFavorited を同時に取得
+		const full = await prisma.photo.findUniqueOrThrow({
+			where: { id: rec.id },
+			include: {
+				_count: { select: { PhotoComment: true, PhotoFavorite: true } },
+				PhotoFavorite: { where: { userId }, select: { userId: true } },
+			},
+		});
+
+		// 署名付きプレビュー（任意: クエリで presign/ttl を切替可能にしても◎）
+		let previewUrl: string | null = null;
+		if (isImageKey(full.objectKey)) {
+			previewUrl = await getSignedUrl(
+				s3,
+				new GetObjectCommand({ Bucket: BUCKET_NAME, Key: full.objectKey }),
+				{ expiresIn: 300 },
+			);
+		}
+
+		// 5) 完全な PhotoItem を返す
+		return c.json({
+			item: {
+				id: full.id,
+				objectKey: full.objectKey,
+				mime: full.mime,
+				bytes: full.bytes,
+				createdAt: full.createdAt,
+				width: full.width,
+				height: full.height,
+				exifJson: full.exifJson,
+				status: full.status,
+				previewUrl,
+				favoriteCount: full._count.PhotoFavorite,
+				commentCount: full._count.PhotoComment,
+				isFavorited: full.PhotoFavorite.length > 0,
+			},
+		});
+	});

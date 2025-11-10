@@ -81,8 +81,13 @@ export default function Login() {
 							</FormItem>
 						)}
 					/>
-					<Button disabled={requestState.isLoading} className="w-full h-12 mt-2 cursor-pointer">
-						{requestState.isLoading && <LoaderCircle className="animate-spin" />}
+					<Button
+						disabled={requestState.isLoading}
+						className="w-full h-12 mt-2 cursor-pointer"
+					>
+						{requestState.isLoading && (
+							<LoaderCircle className="animate-spin" />
+						)}
 						LOGIN
 					</Button>
 				</form>

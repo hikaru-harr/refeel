@@ -1,23 +1,32 @@
 // hooks/useFileUpload.ts
-import { useState } from "react";
+
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import type { PhotoItem } from "@/api/photos";
 import {
 	type PresignUploadRes,
 	presignUpload,
 	uploadCompleat,
 } from "@/api/storage";
 import { uploadToSignedUrl } from "@/lib/upload";
-import type { PhotoItem } from "@/api/photos";
 
 // クエリキーのセカンド要素に { group, take, presign, ttl } を入れている前提
-type PhotosKeyParam = { group?: "ymd" | "ym" | "all"; take?: number; presign?: boolean; ttl?: number };
+type PhotosKeyParam = {
+	group?: "ymd" | "ym" | "all";
+	take?: number;
+	presign?: boolean;
+	ttl?: number;
+};
 
 export default function useFileUpload() {
 	const qc = useQueryClient();
 	const [isUploading, setIsUploading] = useState(false);
 	const [isError, setIsError] = useState(false);
 
-	const computeGroupKey = (group: PhotosKeyParam["group"], createdAtISO: string) => {
+	const computeGroupKey = (
+		group: PhotosKeyParam["group"],
+		createdAtISO: string,
+	) => {
 		if (group === "all") return "all";
 		const d = new Date(createdAtISO);
 		const y = d.getFullYear();
@@ -36,7 +45,9 @@ export default function useFileUpload() {
 			if (!old) continue;
 
 			// key は ["photos", { group: "ymd", ... }] の想定
-			const params = (Array.isArray(key) ? key[1] : undefined) as PhotosKeyParam | undefined;
+			const params = (Array.isArray(key) ? key[1] : undefined) as
+				| PhotosKeyParam
+				| undefined;
 			const group = params?.group ?? "ymd";
 			const gk = computeGroupKey(group, created.createdAt);
 

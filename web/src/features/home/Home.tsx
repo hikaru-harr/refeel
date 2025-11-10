@@ -3,7 +3,7 @@ import FileView from "./PhotoViews";
 import useInfiniteScroll from "./useInfiniteScroll";
 
 function Home() {
-	const { sentinelRef, fetchPhotoQuery } = useInfiniteScroll()
+	const { sentinelRef, fetchPhotoQuery } = useInfiniteScroll();
 
 	return (
 		<div>

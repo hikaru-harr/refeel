@@ -77,7 +77,7 @@ photos.delete("/:photoId/favorite", async (c) => {
 		.delete({
 			where: { photoId_userId: { userId, photoId } },
 		})
-		.catch(() => { });
+		.catch(() => {});
 	return c.json({ ok: true });
 });
 photos.get("/", async (c) => {
@@ -94,13 +94,21 @@ photos.get("/", async (c) => {
 	const [total, mine, sample, curdb] = await Promise.all([
 		prisma.photo.count(),
 		prisma.photo.count({ where: { userId } }),
-		prisma.photo.findFirst({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
-		prisma.$queryRaw<Array<{ current_database: string }>>`select current_database()`,
+		prisma.photo.findFirst({
+			orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+		}),
+		prisma.$queryRaw<
+			Array<{ current_database: string }>
+		>`select current_database()`,
 	]);
 
 	console.log("DB name:", curdb?.[0]?.current_database);
 	console.log("photo total:", total, "mine:", mine);
-	console.log("latest sample:", { id: sample?.id, userId: sample?.userId, createdAt: sample?.createdAt });
+	console.log("latest sample:", {
+		id: sample?.id,
+		userId: sample?.userId,
+		createdAt: sample?.createdAt,
+	});
 	// --- 1. DBから取得 ---
 	const rows = await prisma.photo.findMany({
 		where: { userId },
@@ -112,7 +120,7 @@ photos.get("/", async (c) => {
 			PhotoFavorite: { where: { userId }, select: { userId: true } },
 		},
 	});
-	console.log("rows", rows)
+	console.log("rows", rows);
 
 	// --- 2. presign URL付与 ---
 	const isImageKey = (key: string) => /\.(jpe?g|png|webp|gif|heic)$/i.test(key);
