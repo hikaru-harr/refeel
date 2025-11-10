@@ -2,13 +2,13 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import type { PhotoItem } from "@/api/photos";
 import {
 	type PresignUploadRes,
 	presignUpload,
 	uploadCompleat,
 } from "@/api/storage";
 import { uploadToSignedUrl } from "@/lib/upload";
+import type { PhotoItemType } from "@refeel/shared/photo.js";
 
 // クエリキーのセカンド要素に { group, take, presign, ttl } を入れている前提
 type PhotosKeyParam = {
@@ -36,7 +36,7 @@ export default function useFileUpload() {
 		return `${y}-${m}-${day}`; // default: ymd
 	};
 
-	const optimisticInsert = (created: PhotoItem) => {
+	const optimisticInsert = (created: PhotoItemType) => {
 		// すべての "photos" キャッシュに対して反映
 		const entries = qc.getQueriesData<any>({ queryKey: ["photos"] });
 		let touched = false;
@@ -61,7 +61,7 @@ export default function useFileUpload() {
 			if (!first.grouped) first.grouped = {};
 			if (!Array.isArray(first.grouped[gk])) first.grouped[gk] = [];
 			// 重複チェック（念のため）
-			if (!first.grouped[gk].some((it: PhotoItem) => it.id === created.id)) {
+			if (!first.grouped[gk].some((it: PhotoItemType) => it.id === created.id)) {
 				first.grouped[gk].unshift(created);
 				qc.setQueryData(key, draft);
 				touched = true;
@@ -91,8 +91,8 @@ export default function useFileUpload() {
 					const res = await uploadToSignedUrl(presigned.url, file);
 					if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
 
-					// 3) 完了通知 → サーバが完全 PhotoItem を返す
-					const { item }: { item: PhotoItem } = await uploadCompleat({
+					// 3) 完了通知 → サーバが完全 PhotoItemType を返す
+					const { item }: { item: PhotoItemType } = await uploadCompleat({
 						key: presigned.key,
 						mime: file.type || "application/octet-stream",
 						bytes: file.size,

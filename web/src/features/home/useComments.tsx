@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	deleteComment,
 	fetchComments,
-	type PhotoComment,
 	postComment,
 } from "../../api/photos";
+import type { PhotoComment } from "@refeel/shared/photo.js";
 
 /** 読み取り：photoId ごとに Query する */
 export function useCommentsList(photoId: string | null) {
@@ -124,9 +124,9 @@ export function useCommentActions() {
 							grouped[k] = grouped[k].map((it) =>
 								it.id === photoId
 									? {
-											...it,
-											commentCount: Math.max(0, (it.commentCount ?? 0) - 1),
-										}
+										...it,
+										commentCount: Math.max(0, (it.commentCount ?? 0) - 1),
+									}
 									: it,
 							);
 						}
