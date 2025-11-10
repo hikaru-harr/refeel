@@ -1,40 +1,7 @@
+import type { ListCommentsResponse, PhotoComment, PhotoItem } from "@refeel/shared/photo.js";
 import { getAuth } from "firebase/auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string;
-
-export type PhotoComment = {
-	id: string;
-	photoId: string;
-	userId: string;
-	body: string;
-	createdAt: string; // ISO
-	updatedAt?: string;
-};
-
-export type ListCommentsResponse = {
-	items: PhotoComment[]; // 昇順（古い→新しい）で返ってくる仕様
-};
-
-export type PhotoItem = {
-	id: string;
-	objectKey: string;
-	mime: string | null;
-	bytes: number | null;
-	createdAt: string; // ISO
-	width: number | null;
-	height: number | null;
-	exifJson: Record<string, unknown> | null;
-	status: string;
-	previewUrl: string | null;
-	favoriteCount: number;
-	commentCount: number;
-	isFavorited: boolean;
-};
-
-export type ListPhotosResponse = {
-	grouped: Record<string, PhotoItem[]>; // group=all のときは { all: PhotoItem[] }
-	nextCursor: string | null;
-};
 
 export async function fetchPhotos({
 	cursor,
@@ -53,7 +20,7 @@ export async function fetchPhotos({
 	const res = await fetch(`${API_BASE}/photos?${q.toString()}`, {
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`, // ← Firebase Authから取得
+			Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`,
 		},
 	});
 	return (await res.json()) as {
@@ -67,7 +34,7 @@ export async function favOn(photoId: string) {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`, // ← Firebase Authから取得
+			Authorization: `Bearer ${localStorage.getItem('firebase_token') ?? ''}`,
 		},
 	});
 
