@@ -14,13 +14,13 @@ export default function Login() {
 
 	return (
 		<div className="w-[400px] mx-auto mt-[100px]">
-			<h1 className="text-2xl font-bold text-center bg-violet-600 text-white py-2">
-				ReFeel
+			<h1 className="text-2xl font-bold text-center text-violet-600 py-2">
+				ReFeel.
 			</h1>
 			<Form {...loginForm}>
 				<form
 					onSubmit={loginForm.handleSubmit(onSubmit)}
-					className="p-6 border border-violet-600 space-y-4"
+					className="p-6 space-y-4"
 				>
 					{isError && (
 						<div className="bg-red-50 w-full p-3 rounded-md border border-red-600">
