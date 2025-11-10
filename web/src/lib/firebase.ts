@@ -43,34 +43,38 @@ function toAuthUser(u: User): AuthUser {
 }
 
 export class FirebaseAuthAdapter implements AuthPort {
-  // auth は外の単一インスタンスを使う
-  async signUpWithEmail(email: string, password: string): Promise<AuthUser> {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    return toAuthUser(cred.user);
-  }
+	// auth は外の単一インスタンスを使う
+	async signUpWithEmail(email: string, password: string): Promise<AuthUser> {
+		const cred = await createUserWithEmailAndPassword(auth, email, password);
+		return toAuthUser(cred.user);
+	}
 
-  async signInWithEmail(email: string, password: string): Promise<AuthUser> {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    return toAuthUser(cred.user);
-  }
+	async signInWithEmail(email: string, password: string): Promise<AuthUser> {
+		const {user} = await signInWithEmailAndPassword(auth, email, password);
+		const token = await user.getIdToken()
+		localStorage.setItem("firebase_token", token)
+		return toAuthUser(user);
+	}
 
-  async signOut(): Promise<void> {
-    await fbSignOut(auth);
-  }
+	async signOut(): Promise<void> {
+		await fbSignOut(auth);
+	}
 
-  async getCurrentUser(): Promise<AuthUser | null> {
-    const u = auth.currentUser ?? (await waitAuthReady());
-    return u ? toAuthUser(u) : null;
-  }
+	async getCurrentUser(): Promise<AuthUser | null> {
+		const u = auth.currentUser ?? (await waitAuthReady());
+		return u ? toAuthUser(u) : null;
+	}
 
-  // ★ 初期化完了を待ってから token を取得
-  async getIdToken(forceRefresh = false): Promise<string | null> {
-    const u = auth.currentUser ?? (await waitAuthReady());
-    if (!u) return null;
-    return u.getIdToken(forceRefresh);
-  }
+	// ★ 初期化完了を待ってから token を取得
+	async getIdToken(forceRefresh = false): Promise<string | null> {
+		const u = auth.currentUser ?? (await waitAuthReady());
+		if (!u) return null;
+		return u.getIdToken(forceRefresh);
+	}
 
-  onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
-    return fbOnAuthStateChanged(auth, (u) => callback(u ? toAuthUser(u) : null));
-  }
+	onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
+		return fbOnAuthStateChanged(auth, (u) =>
+			callback(u ? toAuthUser(u) : null),
+		);
+	}
 }

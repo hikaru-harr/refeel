@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { useAuth } from "./middlewares/auth.js";
 import { storage } from "./routers/storage.js";
+import { photos } from "./routers/photos.js";
 
 const app = new Hono();
 
@@ -16,6 +17,7 @@ app.use("*", useAuth);
 app.get("/", (c) => c.text("Hello Hono!"));
 app.get("/health", (c) => c.json({ ok: true }));
 app.route("/storage", storage);
+app.route("/photos", photos);
 
 const port = Number(process.env.PORT ?? 3000);
 serve({ fetch: app.fetch, port }, (info) => {
