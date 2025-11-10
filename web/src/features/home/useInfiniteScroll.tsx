@@ -37,9 +37,9 @@ const useInfiniteScroll = () => {
         readonly [string, { group: "ym" | "ymd"; take: number }], // queryKey の型
         Cursor              // pageParam（= cursor）の型
     >({
-        queryKey: ["photos", { group: "ym", take: 10 }],
+        queryKey: ["photos", { group: "ym", take: 50 }],
         queryFn: ({ pageParam }) =>
-            fetchPhotos({ group: "ym", take: 10, cursor: pageParam }),
+            fetchPhotos({ group: "ym", take: 50, cursor: pageParam }),
         initialPageParam: undefined, // 初回はカーソルなしでスタート
         getNextPageParam: (last) => last.nextCursor ?? undefined,
         staleTime: 30_000,

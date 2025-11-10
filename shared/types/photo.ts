@@ -1,4 +1,4 @@
-export type PhotoItem = {
+export type PhotoItemType = {
     id: string;
     objectKey: string;
     mime: string | null;
@@ -28,6 +28,6 @@ export type ListCommentsResponse = {
 };
 
 export type ListPhotosResponse = {
-    grouped: Record<string, PhotoItem[]>;
+    grouped: Record<string, PhotoItemType[]>;
     nextCursor: string | null;
 };
