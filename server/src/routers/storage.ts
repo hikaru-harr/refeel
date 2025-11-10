@@ -1,98 +1,19 @@
 import crypto from "node:crypto";
 import {
 	GetObjectCommand,
-	HeadObjectCommand,
 	ListObjectsV2Command,
 	PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { z } from "zod";
 import { BUCKET_NAME, s3 } from "../lib/bucket.js";
 import { prisma } from "../lib/prisma.js";
+import { CompleteBody, DownloadQuery, ListQuery, UploadBody } from "@refeel/shared/storage.js";
+import { extFrom, makeKey, isImageKey, mapWithLimit, ensureObjectExists, enqueueAIJob } from "@/lib/utils.js";
 
-const UploadBody = z.object({
-	contentType: z.string().min(1),
-	key: z.string().min(1).optional(),
-});
-
-const CompleteBody = z.object({
-	key: z.string().min(1),
-	mime: z.string().min(1),
-	bytes: z.coerce.number().int().min(1),
-	sha256: z.string().min(1).optional(), // 任意（重複検知などに利用）
-	exifHint: z.record(z.string(), z.string()).optional(), // 任意（撮影日時などヒント）
-});
-
-const DownloadQuery = z.object({ key: z.string().min(1) });
-
-const ListQuery = z.object({
-	prefix: z.string().optional(),
-	limit: z.coerce.number().int().min(1).max(1000).optional(),
-	token: z.string().optional(),
-	presign: z.coerce.boolean().optional(), // 例: ?presign=1
-	ttl: z.coerce.number().int().min(60).max(3600).optional(), // 例: ?ttl=300
-	onlyImages: z.coerce.boolean().optional(), // 例: ?onlyImages=0 で全て署名
-});
-
-const extFrom = (ct: string) =>
-	({
-		"image/jpeg": "jpg",
-		"image/jpg": "jpg",
-		"image/png": "png",
-		"image/webp": "webp",
-		"image/heic": "heic",
-		"image/heif": "heif",
-	})[ct] ?? "bin";
-
-const makeKey = (ext: string) =>
-	`photos/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
-
-// 画像判定（拡張子ベース）
-const isImageKey = (key: string) =>
-	/\.(jpg|jpeg|png|webp|gif|heic|heif)$/i.test(key);
-
-// 簡易: 同時実行を制御
-async function mapWithLimit<T, R>(
-	arr: T[],
-	limit: number,
-	fn: (v: T, i: number) => Promise<R>,
-): Promise<R[]> {
-	const ret: R[] = new Array(arr.length);
-	let i = 0;
-	const workers = new Array(Math.min(limit, arr.length))
-		.fill(0)
-		.map(async () => {
-			while (i < arr.length) {
-				const cur = i++;
-				ret[cur] = await fn(arr[cur], cur);
-			}
-		});
-	await Promise.all(workers);
-	return ret;
-}
-
-// 追加: S3上の存在確認（HEAD）ヘルパ
-async function ensureObjectExists(key: string) {
-	await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
-}
-
-// 追加: AIワーカーへの投入ダミー（実装はお好みのキューで差し替えてOK）
-async function enqueueAIJob(input: {
-	photoId: string;
-	key: string;
-	mime: string;
-	bytes: number;
-	sha256?: string;
-}) {
-	// TODO: BullMQ / RabbitMQ / Cloud Tasks / 自前ワーカーへ投げる
-	// いまはログだけ（MVP）
-	console.log("[AI-QUEUE] enqueue", input);
-}
 
 export const storage = new Hono()
-
 	// 一覧 + オプションでプレビューURLを同梱
 	.get("/", zValidator("query", ListQuery), async (c) => {
 		const { prefix, limit, token, presign, ttl, onlyImages } =
@@ -207,22 +128,29 @@ export const storage = new Hono()
 		const userId = c.var.userId as string;
 		const { key, mime, bytes, sha256, exifHint } = c.req.valid("json");
 
-		// 1) S3 に実体確認
+		// 任意: /complete?presign=1&ttl=300 のように制御
+		const url = new URL(c.req.url);
+		const wantPresign = url.searchParams.get("presign") === "1";
+		const ttlSec = Math.max(60, Math.min(3600, Number(url.searchParams.get("ttl") ?? "300"))); // 60〜3600の範囲
+
+		// 1) S3 に実体確認（HeadObject的な軽量確認）
 		try {
 			await ensureObjectExists(key);
 		} catch {
 			return c.json(
 				{ error: "ObjectNotFound", message: `No such object: ${key}` },
-				400,
+				400
 			);
 		}
 
-		// 2) DB 作成（同一キーの重複を避けたいなら upsert にしてもOK）
+		// 2) DB 作成（重複を避けたいなら upsert / unique 制約）
 		const createdAt =
 			typeof exifHint?.taken_at === "string"
 				? new Date(exifHint.taken_at)
 				: new Date();
 
+		// 例: objectKey + userId でユニーク制約を想定
+		// Prisma: @@unique([userId, objectKey])
 		const rec = await prisma.photo.create({
 			data: {
 				id: crypto.randomUUID(),
@@ -233,15 +161,14 @@ export const storage = new Hono()
 				sha256: sha256 ?? null,
 				exifJson: exifHint ?? null,
 				status: "UPLOADED",
-				createdAt, // 並び順に効くのでここで確定
+				createdAt, // 並び順基準
 			},
 		});
 
 		// 3) 必要なら解析キューへ
 		await enqueueAIJob({ photoId: rec.id, key, mime, bytes, sha256 });
 
-		// 4) 返却用に完全アイテムを整形
-		//    counts と本人の isFavorited を同時に取得
+		// 4) counts と本人の isFavorited を同時に取得
 		const full = await prisma.photo.findUniqueOrThrow({
 			where: { id: rec.id },
 			include: {
@@ -250,32 +177,35 @@ export const storage = new Hono()
 			},
 		});
 
-		// 署名付きプレビュー（任意: クエリで presign/ttl を切替可能にしても◎）
+		// 5) 画像だけ署名URL（クエリ指定がある場合のみ）
 		let previewUrl: string | null = null;
-		if (isImageKey(full.objectKey)) {
+		if (wantPresign && isImageKey(full.objectKey)) {
 			previewUrl = await getSignedUrl(
 				s3,
 				new GetObjectCommand({ Bucket: BUCKET_NAME, Key: full.objectKey }),
-				{ expiresIn: 300 },
+				{ expiresIn: ttlSec }
 			);
 		}
 
-		// 5) 完全な PhotoItem を返す
-		return c.json({
-			item: {
-				id: full.id,
-				objectKey: full.objectKey,
-				mime: full.mime,
-				bytes: full.bytes,
-				createdAt: full.createdAt,
-				width: full.width,
-				height: full.height,
-				exifJson: full.exifJson,
-				status: full.status,
-				previewUrl,
-				favoriteCount: full._count.PhotoFavorite,
-				commentCount: full._count.PhotoComment,
-				isFavorited: full.PhotoFavorite.length > 0,
+		// 6) 完全な PhotoItem を返す（createdAt は ISO に）
+		return c.json(
+			{
+				item: {
+					id: full.id,
+					objectKey: full.objectKey,
+					mime: full.mime,
+					bytes: full.bytes,
+					createdAt: full.createdAt.toISOString(), // ★ ISO文字列で返す
+					width: full.width,
+					height: full.height,
+					exifJson: full.exifJson,
+					status: full.status,
+					previewUrl,
+					favoriteCount: full._count.PhotoFavorite,
+					commentCount: full._count.PhotoComment,
+					isFavorited: full.PhotoFavorite.length > 0,
+				},
 			},
-		});
+			201 // 作成
+		);
 	});

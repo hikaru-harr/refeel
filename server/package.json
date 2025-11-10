@@ -1,5 +1,6 @@
 {
 	"name": "server",
+	"private": true,
 	"type": "module",
 	"prisma": {
 		"schema": "./prisma/schema.prisma"
@@ -14,6 +15,7 @@
 		"prisma:generate": "prisma generate"
 	},
 	"dependencies": {
+		"@refeel/shared": "workspace:*",
 		"@auth/core": "^0.41.0",
 		"@aws-sdk/client-s3": "^3.911.0",
 		"@aws-sdk/s3-request-presigner": "^3.911.0",

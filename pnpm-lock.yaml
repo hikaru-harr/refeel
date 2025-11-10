@@ -32,6 +32,9 @@ importers:
       '@prisma/client':
         specifier: ^6.18.0
         version: 6.18.0(prisma@6.18.0(typescript@5.9.3))(typescript@5.9.3)
+      '@refeel/shared':
+        specifier: workspace:*
+        version: link:../shared
       argon2:
         specifier: ^0.44.0
         version: 0.44.0

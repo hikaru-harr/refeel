@@ -92,11 +92,12 @@ export default function useFileUpload() {
 					if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
 
 					// 3) 完了通知 → サーバが完全 PhotoItemType を返す
-					const { item }: { item: PhotoItemType } = await uploadCompleat({
+					const item: PhotoItemType = await uploadCompleat({
 						key: presigned.key,
 						mime: file.type || "application/octet-stream",
 						bytes: file.size,
 						exifHint: { taken_at: new Date().toISOString() },
+						sha256: "動作確認"
 					});
 
 					// 4) 即時挿入（キャッシュがあれば）
