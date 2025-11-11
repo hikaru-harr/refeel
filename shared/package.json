@@ -3,7 +3,7 @@
 	"private": true,
 	"version": "1.0.0",
 	"description": "",
-	"main": "index.js",
+	"main": "index.ts",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
@@ -14,6 +14,7 @@
 	"dependencies": {
 		"zod": "^4.1.12"
 	},
+	"type": "module",
 	"types": "./types/index.ts",
 	"exports": {
 		"./*": "./types/*",
