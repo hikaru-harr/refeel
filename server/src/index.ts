@@ -11,7 +11,7 @@ const app = new Hono();
 // CORS（フロントだけ許可）
 app.use(
 	"*",
-	cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:5173" }),
+	cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:5174" }),
 );
 app.use("*", useAuth);
 app.get("/", (c) => c.text("Hello Hono!"));
