@@ -41,41 +41,38 @@ function PhotoActions({ file }: Props) {
 				</Button>
 			</div>
 
-			{/* 右側FAB群 */}
-			<div className="pointer-events-none absolute inset-y-0 right-0 flex flex-col items-end justify-center gap-3 pr-1">
-				<button
-					type="button"
-					className="pointer-events-auto rounded-full w-12 h-12 grid place-items-center bg-violet-500 text-white shadow"
-					onClick={() => console.log("Recommend start:", file.objectKey)}
-					title="AIタグ生成"
-					aria-label="AIタグ生成"
-				>
-					<Tag />
-				</button>
+			<button
+				type="button"
+				className="absolute bottom-[60px] right-0  cursor-pointer rounded-full w-12 h-12 grid place-items-center bg-violet-500 text-white shadow"
+				onClick={() => console.log("Recommend start:", file.objectKey)}
+				title="AIタグ生成"
+				aria-label="AIタグ生成"
+			>
+				<Tag />
+			</button>
 
-				<button
-					type="button"
-					className={`pointer-events-auto rounded-full w-12 h-12 grid place-items-center shadow ${file.isFavorited
-						? "bg-yellow-400 text-black"
-						: "bg-neutral-300 text-gray-700"
-						}`}
-					onClick={() => toggleFav.mutate(file)}
-					title={file.isFavorited ? "お気に入り解除" : "お気に入り"}
-					aria-label="お気に入り"
-				>
-					<Star />
-				</button>
+			<button
+				type="button"
+				className={`absolute bottom-[120px] right-0 cursor-pointer rounded-full w-12 h-12 grid place-items-center shadow ${file.isFavorited
+					? "bg-yellow-400 text-black"
+					: "bg-neutral-300 text-gray-700"
+					}`}
+				onClick={() => toggleFav.mutate(file)}
+				title={file.isFavorited ? "お気に入り解除" : "お気に入り"}
+				aria-label="お気に入り"
+			>
+				<Star />
+			</button>
 
-				<button
-					type="button"
-					className="pointer-events-auto rounded-full w-12 h-12 grid place-items-center bg-blue-500 text-white shadow"
-					onClick={() => console.log("Open comment thread for", file.id)}
-					title="コメント"
-					aria-label="コメント"
-				>
-					<MessageCircleMore />
-				</button>
-			</div>
+			<button
+				type="button"
+				className="absolute bottom-[180px] right-0 cursor-pointer rounded-full w-12 h-12 grid place-items-center bg-blue-500 text-white shadow"
+				onClick={() => console.log("Open comment thread for", file.id)}
+				title="コメント"
+				aria-label="コメント"
+			>
+				<MessageCircleMore />
+			</button>
 		</div>
 	);
 }
