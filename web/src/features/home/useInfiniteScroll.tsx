@@ -19,6 +19,7 @@ type Cursor = string | undefined;
  * <div ref={sentinelRef} /> ← この要素が画面に入ると次ページを読み込む
  */
 const useInfiniteScroll = () => {
+	console.log("useInfiniteScroll")
 	// 監視対象となるダミー要素（“番兵”）の参照
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -37,9 +38,9 @@ const useInfiniteScroll = () => {
 		readonly [string, { group: "ym" | "ymd"; take: number }], // queryKey の型
 		Cursor // pageParam（= cursor）の型
 	>({
-		queryKey: ["photos", { group: "ym", take: 50 }],
+		queryKey: ["photos", { group: "ym", take: 25 }],
 		queryFn: ({ pageParam }) =>
-			fetchPhotos({ group: "ym", take: 50, cursor: pageParam }),
+			fetchPhotos({ group: "ym", take: 25, cursor: pageParam }),
 		initialPageParam: undefined, // 初回はカーソルなしでスタート
 		getNextPageParam: (last) => last.nextCursor ?? undefined,
 		staleTime: 30_000,

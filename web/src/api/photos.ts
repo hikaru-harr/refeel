@@ -10,7 +10,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL as string;
 export async function fetchPhotos({
 	cursor,
 	group = "ymd" as const,
-	take = 50,
+	take = 25,
 }: {
 	cursor?: string;
 	group?: "ym" | "ymd" | "all";

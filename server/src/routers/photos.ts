@@ -83,7 +83,7 @@ photos.delete("/:photoId/favorite", async (c) => {
 photos.get("/", async (c) => {
 	const userId = c.var.userId as string; // Firebase UID
 	const {
-		take = 50,
+		take = 25,
 		cursor,
 		group = "ymd",
 		presign = true,
