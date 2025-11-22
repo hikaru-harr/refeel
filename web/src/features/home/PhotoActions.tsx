@@ -1,14 +1,18 @@
 import type { PhotoItemType } from "@refeel/shared/photo.js";
-import { MessageCircleMore, Send, Star, Tag } from "lucide-react";
+import { MessageCircle, MessageCircleMore, Send, Star, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import usePhotoActgions from "./usePhotoActgions";
+import { useState, memo } from "react";
+import CommentDialog from "./CommentDialog";
 
 interface Props {
 	file: PhotoItemType;
 }
 
-function PhotoActions({ file }: Props) {
+const PhotoActions = memo(({ file }: Props) => {
+	const [isFavorited, setIsFavorited] = useState(file.isFavorited)
+	const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false)
 
 	const {
 		toggleFav,
@@ -19,6 +23,7 @@ function PhotoActions({ file }: Props) {
 
 	return (
 		<div className="relative w-full">
+			{isCommentDialogOpen && <CommentDialog fileId={file.id} setIsCommentDialogOpen={setIsCommentDialogOpen} />}
 			<div className="flex items-center gap-2">
 				<Input
 					type="text"
@@ -53,13 +58,14 @@ function PhotoActions({ file }: Props) {
 
 			<button
 				type="button"
-				className={`absolute bottom-[120px] right-0 cursor-pointer rounded-full w-12 h-12 grid place-items-center shadow ${file.isFavorited
+				className={`absolute bottom-[120px] right-0 cursor-pointer rounded-full w-12 h-12 grid place-items-center shadow ${isFavorited
 					? "bg-yellow-400 text-black"
 					: "bg-neutral-300 text-gray-700"
 					}`}
-				onClick={() => toggleFav.mutate(file)}
-				title={file.isFavorited ? "お気に入り解除" : "お気に入り"}
-				aria-label="お気に入り"
+				onClick={() => {
+					toggleFav.mutate(file);
+					setIsFavorited(!isFavorited)
+				}}
 			>
 				<Star />
 			</button>
@@ -67,14 +73,17 @@ function PhotoActions({ file }: Props) {
 			<button
 				type="button"
 				className="absolute bottom-[180px] right-0 cursor-pointer rounded-full w-12 h-12 grid place-items-center bg-blue-500 text-white shadow"
-				onClick={() => console.log("Open comment thread for", file.id)}
+				onClick={() => setIsCommentDialogOpen(true)}
 				title="コメント"
 				aria-label="コメント"
 			>
-				<MessageCircleMore />
+				<div className="relative flex justify-center items-center">
+					<small className="absolute ">1</small>
+					<MessageCircle />
+				</div>
 			</button>
 		</div>
 	);
-}
+})
 
 export default PhotoActions;

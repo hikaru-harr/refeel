@@ -1,13 +1,10 @@
-import type {
-	ListPhotosResponse,
-	PhotoItemType,
-} from "@refeel/shared/photo.js";
-import type {
-	InfiniteData,
-	UseInfiniteQueryResult,
-} from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+// src/features/photos/FileView.tsx
+import type { ListPhotosResponse, PhotoItemType } from "@refeel/shared/photo.js";
+import type { InfiniteData, UseInfiniteQueryResult } from "@tanstack/react-query";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import PhotoDetail from "./PhotoDetail";
+import { useImagePrefetch } from "./useImagePrefetch";
+import { VirtualPhotoGrid } from "./VirtualPhotoGrid";
 
 type Props = {
 	fetchPhotoQuery: UseInfiniteQueryResult<
@@ -17,38 +14,41 @@ type Props = {
 };
 
 export default function FileView({ fetchPhotoQuery }: Props) {
-	console.log('FileView')
+	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [isPending, startTransition] = useTransition();
+	const { prefetch, getReadyUrl } = useImagePrefetch();
 
-	const [selectedFile, setSelectedFile] = useState<PhotoItemType | null>(null)
+	const pages = fetchPhotoQuery.data?.pages ?? [];
+	const files: PhotoItemType[] = useMemo(
+		() => pages.flatMap((p) => Object.values(p.grouped).flat()),
+		[pages]
+	);
 
-	const files: PhotoItemType[] = useMemo(() => {
-		const pages = fetchPhotoQuery.data?.pages ?? [];
-		return pages.flatMap((p) => Object.values(p.grouped).flat());
-	}, [fetchPhotoQuery.data]);
+	const filesMap = useMemo(() => {
+		const m = new Map<string, PhotoItemType>();
+		for (const f of files) m.set(f.id, f);
+		return m;
+	}, [files]);
 
+	const handleOpen = useCallback((id: string) => {
+		startTransition(() => setSelectedId(id));
+	}, []);
+	const handleClose = useCallback(() => setSelectedId(null), []);
+
+	const selectedFile = selectedId ? filesMap.get(selectedId) ?? null : null;
 
 	return (
 		<>
-			{selectedFile && <PhotoDetail file={selectedFile} setSelectedFile={setSelectedFile} fetchPhotoQuery={fetchPhotoQuery} />}
-			<div className="grid grid-flow-row lg:grid-cols-5 md:grid-cols-4 grid-cols-3 gap-1 mt-4">
-				{files.map((file) => (
-					<button
-						key={file.id}
-						type="button"
-						className={`cursor-pointer`}
-						onClick={() => setSelectedFile(file)}
-					>
-						<div className="relative aspect-square overflow-hidden bg-neutral-200">
-							<img
-								src={file.previewUrl ?? ""}
-								alt={file.objectKey}
-								className="absolute inset-0 h-full w-full object-cover"
-								loading="lazy"
-							/>
-						</div>
-					</button>
-				))}
-			</div>
+			{selectedFile && (
+				<PhotoDetail
+					file={selectedFile}
+					close={handleClose}
+					refetch={fetchPhotoQuery.refetch}
+					getReadyUrl={getReadyUrl}
+				/>
+			)}
+
+			<VirtualPhotoGrid files={files} onOpen={handleOpen} prefetch={prefetch} />
 		</>
 	);
 }

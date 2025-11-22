@@ -1,131 +1,94 @@
-import type {
-	ListPhotosResponse,
-	PhotoItemType,
-} from "@refeel/shared/photo.js";
-import type {
-	InfiniteData,
-	UseInfiniteQueryResult,
-} from "@tanstack/react-query";
-import { ArrowLeft, Trash2 } from "lucide-react";
-import {
-	Dialog,
-	DialogClose,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import PhotoActions from "./PhotoActions";
-import PhotoItem from "./PhotoItem";
-import { useCommentActions, useCommentsList } from "./useComments";
+// src/features/photos/PhotoDetail.tsx
+import { useEffect, useMemo, useState } from "react";
+import type { ListPhotosResponse, PhotoItemType } from "@refeel/shared/photo.js";
+import type { InfiniteData, UseInfiniteQueryResult } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
+import { Lightbox } from "./LightBox";
 
 interface Props {
 	file: PhotoItemType;
-	setSelectedFile: React.Dispatch<React.SetStateAction<PhotoItemType | null>>
-	fetchPhotoQuery: UseInfiniteQueryResult<
+	close: () => void;
+	refetch: UseInfiniteQueryResult<
 		InfiniteData<ListPhotosResponse, unknown>,
 		Error
-	>;
+	>["refetch"];
+	getReadyUrl: (id: string) => string | null;
 }
 
-const PhotoDetail = ({ file, setSelectedFile, fetchPhotoQuery }: Props) => {
-	console.log("PHOTODETAIL")
-	// ① コメント一覧取得は「開いている1件分だけ」
-	const comments = useCommentsList(file.id);
+export default function PhotoDetail({ file, close, refetch, getReadyUrl }: Props) {
+	const [hiresReady, setHiresReady] = useState(false);
+	const [hiresUrl, setHiresUrl] = useState<string | null>(null);
 
-	// ② 操作系（投稿/削除）は一度だけ作る → 呼ぶときに { photoId, ... }
-	const { deleteComment } = useCommentActions();
+	useEffect(() => {
+		let cancelled = false;
+		const ready = getReadyUrl(file.id);
+		const targetUrl = ready ?? (file.previewUrl ?? "");
+		setHiresUrl(targetUrl);
+		setHiresReady(!!ready);
+
+		if (!ready && file.previewUrl) {
+			const img = new Image();
+			img.src = file.previewUrl;
+			(img.decode?.() ?? Promise.resolve())
+				.then(() => { if (!cancelled) { setHiresUrl(file.previewUrl!); setHiresReady(true); } })
+				.catch(() => { /* サムネのままでもOK */ });
+		}
+		return () => { cancelled = true; };
+	}, [file.id, file.previewUrl, getReadyUrl]);
+
+	const dateLabel = useMemo(
+		() => new Date(file.createdAt).toLocaleDateString(),
+		[file.createdAt]
+	);
 
 	return (
-		<Dialog open={true} onOpenChange={() => setSelectedFile(null)}>
-			<DialogContent className="h-screen w-screen flex flex-col">
+		<Lightbox open onClose={close}>
+			<div className="relative w-screen h-screen flex flex-col bg-white backdrop-blur-sm">
 				{/* Header */}
-				<DialogHeader className="p-4">
-					<DialogClose
-						className="absolute top-6 left-6 cursor-pointer"
+				<div className="flex items-center gap-3 p-3">
+					<button
+						type="button"
+						onClick={close}
+						className="p-2 rounded hover:bg-white/10"
 						aria-label="閉じる"
 					>
 						<ArrowLeft />
-					</DialogClose>
-					<DialogTitle>
-						{new Date(file.createdAt).toLocaleDateString()}
-					</DialogTitle>
-					<DialogDescription className="flex items-center gap-2">
-						<span className="truncate">{file.mime}</span>
-						<span className="text-xs text-neutral-400">・</span>
-						<span className="text-xs text-neutral-500">
-							{file.width && file.height ? `${file.width}×${file.height}` : ""}
-						</span>
-					</DialogDescription>
-				</DialogHeader>
-
-				{/* 画像 */}
-				<div className="relative flex-1 grid place-items-center px-4 overflow-hidden">
-					<img
-						src={file.previewUrl ?? ""}
-						alt="preview"
-						className="max-w-[calc(100vw-2rem)] max-h-[calc(100svh-8rem)] object-contain"
-						onError={() => fetchPhotoQuery.refetch()}
-					/>
+					</button>
+					<div className="min-w-0">
+						<div className="text-sm font-semibold">{dateLabel}</div>
+						<div className="text-xs opacity-80 truncate">
+							{file.mime}
+							{file.width && file.height ? ` ・ ${file.width}×${file.height}` : ""}
+						</div>
+					</div>
 				</div>
 
-				{/* コメント一覧（開いてるダイアログの時だけ読み取り済み） */}
-				{/* <div className="px-4 pb-2 overflow-y-auto grow">
-					<div className="mb-2 flex items-center gap-2">
-						<h3 className="text-sm font-semibold">コメント</h3>
-						<span className="text-xs text-neutral-500">
-							{file.commentCount}件
-						</span>
-					</div>
-
-					<div className="space-y-2">
-						{(comments.data?.items ?? []).map((cm) => {
-							const canDelete = "";
-							return (
-								<div
-									key={cm.id}
-									className="rounded-lg bg-neutral-100 dark:bg-neutral-800 p-2"
-								>
-									<div className="flex items-start justify-between gap-2">
-										<div className="min-w-0">
-											<div className="text-xs text-neutral-500">
-												{new Date(cm.createdAt).toLocaleString()}
-											</div>
-											<div className="text-sm whitespace-pre-wrap break-words">
-												{cm.body}
-											</div>
-										</div>
-										{canDelete && (
-											<button
-												className="shrink-0 p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700"
-												onClick={() =>
-													deleteComment.mutate({
-														photoId: file.id,
-														commentId: cm.id,
-													})
-												}
-												title="コメントを削除"
-												aria-label="コメントを削除"
-											>
-												<Trash2 size={16} />
-											</button>
-										)}
-									</div>
-								</div>
-							);
-						})
-						}
-					</div>
-				</div> */}
-
-				<DialogFooter className="p-4">
-					<PhotoActions file={file} />
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				{/* 画像：サムネ即表示→高解像度フェード */}
+				<div className="relative flex-1 grid place-items-center px-4 pb-4 overflow-hidden">
+					<img
+						src={file.previewUrl ?? ""}
+						alt="thumb"
+						className="max-w-full max-h-full object-contain"
+						style={{ filter: hiresReady ? "none" : "blur(2px)", opacity: hiresReady ? 0 : 1, transition: "opacity .18s" }}
+						loading="eager"
+						decoding="async"
+						draggable={false}
+					/>
+					{hiresUrl && (
+						<img
+							src={hiresUrl}
+							alt="preview"
+							className="absolute inset-4 m-auto max-w-[calc(100%-2rem)] max-h-[calc(100%-2rem)] object-contain"
+							style={{ opacity: hiresReady ? 1 : 0, transition: "opacity .18s" }}
+							loading="eager"
+							decoding="async"
+							fetchPriority="high"
+							onError={() => refetch()}
+							draggable={false}
+						/>
+					)}
+				</div>
+			</div>
+		</Lightbox>
 	);
-};
-
-export default PhotoDetail;
+}
