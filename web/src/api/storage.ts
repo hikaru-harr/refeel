@@ -1,5 +1,6 @@
 import { getAuth } from "firebase/auth";
 import { FirebaseAuthAdapter } from "@/lib/firebase";
+import type { PhotoItemType } from "@refeel/shared/photo.js";
 
 const authAdapter = new FirebaseAuthAdapter();
 
@@ -100,5 +101,5 @@ export async function uploadCompleat({
 		}),
 	});
 	if (!res.ok) throw new Error(`presign download failed: ${res.status}`);
-	return (await res.json()) as { key: string; url: string; expiresIn: number };
+	return (await res.json()) as PhotoItemType
 }

@@ -5,10 +5,26 @@
 		"strict": true,
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
-		"types": ["node"],
+		"types": [
+			"node"
+		],
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx",
-		"outDir": "./dist"
+		"outDir": "./dist",
+		"baseUrl": ".",
+		"paths": {
+			"@/*": [
+				"./src/*"
+			],
+			"@refeel/shared": [
+				"packages/shared/src/index.ts"
+			],
+			"@refeel/shared/*": [
+				"packages/shared/src/*"
+			]
+		}
 	},
-	"exclude": ["node_modules"]
+	"exclude": [
+		"node_modules"
+	],
 }
